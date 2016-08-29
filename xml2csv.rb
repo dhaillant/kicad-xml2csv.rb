@@ -51,13 +51,13 @@ class Component
 		puts string
 	end
 
-	def output_csv
-		@ref.length==0 ? printf("\"\",") : printf("\"%s\",", @ref)
-		@value.length==0 ? printf("\"\",") : printf("\"%s\",", @value)
-		@footprint.length==0 ? printf("\"\",") : printf("\"%s\",", @ref)
-		@datasheet.length==0 ? printf("\"\"") : printf("\"%s\"", @ref)
+	def output_csv file
+		@ref.length==0 ? 	file.printf("\"\",") : file.printf("\"%s\",", @ref)
+		@value.length==0 ?	file.printf("\"\",") : file.printf("\"%s\",", @value)
+		@footprint.length==0 ?	file.printf("\"\",") : file.printf("\"%s\",", @ref)
+		@datasheet.length==0 ?	file.printf("\"\"")  : file.printf("\"%s\"", @ref)
 
-		printf("\n")
+		file.printf("\n")
 	end
 end
 
@@ -121,14 +121,18 @@ class Components
 	end
 
 
-	def output_csv
+	def output_csv csv_filename, separator = ","
+		csv_file = File.new(csv_filename, "w")
+
 		@components_array.each do |c|
-			c.output_csv
+			c.output_csv csv_file
 		end
+
+		csv_file.close
 	end
 
 	def output_csv_grouped_by field, csv_filename, separator = ","
-		# sort the array o components by comparing the component's extra field
+		# sort the array of components by comparing the component's extra field
 		# .to_s is here to avoid comparing a string to a nil when extra field doesn't exist
 		#sca = @components_array.sort { |a, b| a.extra_fields[field].to_s <=> b.extra_fields[field].to_s }
 
@@ -285,12 +289,14 @@ if options[:xml_filename] then
 	#components.group_by "Supplier 1 Ref"
 	if options[:groupby_field] then
 		components.output_csv_grouped_by options[:groupby_field], csv_filename, separator
+	else
+		components.output_csv csv_filename, separator
 	end
 
 	puts "\nDone.\n\n"
 
 else
-	puts "Missing at least input xml filename. PLease, use -h to see help"
+	puts "Requires at least input xml filename. PLease, use -h to see help"
 
 =begin	puts "Usage :"
 	puts " xml2csv.rb <kicad_export.xml> [<BOM.csv>]"
