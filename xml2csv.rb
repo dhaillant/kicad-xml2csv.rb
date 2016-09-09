@@ -131,7 +131,7 @@ class Components
 		csv_file.close
 	end
 
-	def output_csv_grouped_by field, csv_filename, separator = ","
+	def output_csv_grouped_by field, csv_filename, separator = ",", show_refs = false
 		# sort the array of components by comparing the component's extra field
 		# .to_s is here to avoid comparing a string to a nil when extra field doesn't exist
 		#sca = @components_array.sort { |a, b| a.extra_fields[field].to_s <=> b.extra_fields[field].to_s }
@@ -139,6 +139,7 @@ class Components
 		# OR...
 		# sort by reference :
 		sca = @components_array.sort { |a, b| a.ref.to_s <=> b.ref.to_s }
+		#sca = @components_array.sort_by { |c| [c.ref.to_s, c.extra_fields[field].to_s] }
 
 
 		csv_file = File.new(csv_filename, "w")
@@ -150,11 +151,21 @@ class Components
 			#@ref.length==0 ? printf("\"\",") : printf("\"%s\",", @ref)
 
 			#puts "#{grouped_components.count} x #{grouped_components[0].extra_fields[field]}"
-			grouped_components.each do |c_group|
-				#c_group.display
-				#puts "    #{c_group.ref}"
-				#puts c_group.extra_fields{field}
+
+			if show_refs then
+				# output the refs:
+				#csv_file.printf("%s\"%s\"", separator, grouped_components.join(', '))
+
+				csv_file.printf("%s\"", separator)
+				grouped_components.each do |c_group|
+					#c_group.display
+					#puts "    #{c_group.ref}"
+					#puts c_group.extra_fields{field}
+					csv_file.printf("%s ", c_group.ref)
+				end
+				csv_file.printf("\"")
 			end
+
 			csv_file.print "\n"
 			display_progression
 		end
