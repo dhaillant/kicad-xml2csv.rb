@@ -18,7 +18,7 @@ require "rexml/document"
 require 'forwardable'
 
 
-$xml2csv_version = "20160823"
+$xml2csv_version = "20160913"
 
 =begin
 	Convert a Kicad 4 XML export file to CSV
@@ -39,15 +39,6 @@ class Component
 	def display
 		string = @ref + " " + @value
 
-		# extra fields :
-
-=begin
-		string += " " + comp["Comment"] unless comp["Comment"].nil?
-		string += " " + comp["Package"] unless comp["Package"].nil?
-		string += " " + comp["Power"] unless comp["Power"].nil?
-
-		string += " " + comp["Supplier 1 Ref"] unless comp["Supplier 1 Ref"].nil?
-=end
 		puts string
 	end
 
@@ -71,16 +62,6 @@ class Components
 		@components_array = []
 	end
 
-=begin
-	def count_different
-		uca = @components_array.uniq { |c| c.value }
-		return uca.count		
-	end
-
-	def uniq
-		return @components_array.uniq { |c| c.value }
-	end
-=end
 
 	def group_by field
 		# sort the array o components by comparing the component's extra field
@@ -222,37 +203,10 @@ end
 
 
 
-
-
-
-
-
-def ecrire_fichier_csv(nom_fichier, eleves)
-	f = File.open(nom_fichier, "w")
-
-	f.puts "NOM;PRENOM;NE(E) LE;DIV.;DIV. PREC.;Doublant;date_entree;date_sortie;id_national;id_eleve_etab"
-
-	n = 0
-	eleves.each do |e|
-		f.puts "#{e[:nom]};#{e[:prenom]};#{e[:date]};#{e[:div]};#{e[:divprec]};#{e[:doublant]};#{e[:date_entree]};#{e[:date_sortie]};#{e[:id_national]};#{e[:id_eleve_etab]}"
-		n += 1
-		afficher_progression
-	end
-
-	return n
-end
-
-
-
-
-
 puts "xml2csv version " + $xml2csv_version
 puts "(C) David Haillant"
 puts "\n"
 
-#xml_filename	= ARGV[0].to_s
-#csv_filename	= ARGV[1].to_s
-#groupby_field	= ARGV[2].to_s
 
 
 require 'optparse'
@@ -266,38 +220,20 @@ end.parse!
 
 
 
-#if xml_filename.length > 0 then
 if options[:xml_filename] then
-#	if not options[:csv_filename] then
-#		csv_filename = xml_filename + ".csv"
-#	end
 
 	components = Components.new
 	components.read_xml options[:xml_filename]
-	#components.uniq.display
 
-
-	# count similar components
-	#puts components.count_different
-
-	#puts ""
-	#components.display_10_first
 	puts " #{components.count} components found\n\n"
-
-
 
 	options[:csv_filename] ? csv_filename = options[:csv_filename] : csv_filename = options[:xml_filename] + ".csv"
 	options[:separator] ? separator = options[:separator] : separator = ','
 
 	puts "CSV output file: #{csv_filename}, using '#{separator}' as separator"
 	print "Writing CSV file..."
-	#ecrire_fichier_csv nom_fichier_csv, eleves
 
 
-	#components.output_csv
-
-
-	#components.group_by "Supplier 1 Ref"
 	if options[:groupby_field] then
 		components.output_csv_grouped_by options[:groupby_field], csv_filename, separator
 	else
@@ -309,11 +245,5 @@ if options[:xml_filename] then
 else
 	puts "Requires at least input xml filename. PLease, use -h to see help"
 
-=begin	puts "Usage :"
-	puts " xml2csv.rb <kicad_export.xml> [<BOM.csv>]"
-	puts ""
-	puts "If CSV file is omitted, <kicad_export.xml>.csv will be created"
-	puts ""
-=end
 end
 
