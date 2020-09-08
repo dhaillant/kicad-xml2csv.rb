@@ -1,5 +1,6 @@
 # kicad-xml2csv.rb
-My own KiCad xml to csv BOM generator, made in Ruby language
+KiCad "xml to csv" BOM generator, made in Ruby language
+Compatible with KiCad 4 and 5
 
 xml2csv version 20160823
 
