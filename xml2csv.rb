@@ -18,10 +18,10 @@ require "rexml/document"
 require 'forwardable'
 
 
-$xml2csv_version = "20160913"
+$xml2csv_version = "20210901"
 
 =begin
-	Convert a Kicad 4 XML export file to CSV
+	Convert a Kicad V4 or V5 XML export file to CSV
 =end
 
 
@@ -38,6 +38,8 @@ class Component
 
 	def display
 		string = @ref + " " + @value
+
+		# extra fields :
 
 		puts string
 	end
@@ -78,9 +80,7 @@ class Components
 		sca.group_by { |c| c.extra_fields[field] }.each_pair do |value, grouped_components|
 			puts "#{grouped_components.count} x #{grouped_components[0].extra_fields[field]}"
 			grouped_components.each do |c_group|
-				#c_group.display
 				puts "    #{c_group.ref}"
-				#puts c_group.extra_fields{field}
 			end
 		end
 	end
@@ -120,22 +120,16 @@ class Components
 		# OR...
 		# sort by reference :
 		sca = @components_array.sort { |a, b| a.ref.to_s <=> b.ref.to_s }
-		#sca = @components_array.sort_by { |c| [c.ref.to_s, c.extra_fields[field].to_s] }
 
 
 		csv_file = File.new(csv_filename, "w")
 
-		# group by extra field the components
+		# group the components by extra field
 		sca.group_by { |c| c.extra_fields[field] }.each_pair do |value, grouped_components|
-			#csv_file.printf("%d,\"%\"", grouped_components.count, grouped_components[0].extra_fields[field])
 			csv_file.printf("\"%s\"%s%d", grouped_components[0].extra_fields[field].to_s, separator, grouped_components.count)
-			#@ref.length==0 ? printf("\"\",") : printf("\"%s\",", @ref)
-
-			#puts "#{grouped_components.count} x #{grouped_components[0].extra_fields[field]}"
 
 			if show_refs then
 				# output the refs:
-				#csv_file.printf("%s\"%s\"", separator, grouped_components.join(', '))
 
 				csv_file.printf("%s\"", separator)
 				grouped_components.each do |c_group|
@@ -162,16 +156,12 @@ class Components
 		print "Loading XML file #{xml_filename}..."
 		xml_components = doc.elements.to_a("export/components/comp")
 
-		#puts ""
-		#puts "Reading components :"
 		xml_components.each do |xml_comp|
 			c = Component.new xml_comp.attribute("ref").to_s, xml_comp.elements["value"].text
 
 			c.footprint = xml_comp.elements["footprint"].text unless xml_comp.elements["footprint"].nil?
 			c.datasheet = xml_comp.elements["datasheet"].text unless xml_comp.elements["datasheet"].nil?
 
-
-			#c.output_csv
 
 			xml_extra_fields = xml_comp.elements.to_a("fields/field")
 			xml_extra_fields.each do |xml_extra_field|
@@ -180,18 +170,12 @@ class Components
 					:value => xml_extra_field.text
 				}
 				c.extra_fields[extra_field[:name]] = extra_field[:value]
-				#comp[extra_field[:name]] = extra_field[:value]
 			end
 
-			#c.display
-			#puts c.extra_fields
 			@components_array.push c
 			display_progression
 		end
 	end
-
-
-
 end
 
 
@@ -212,10 +196,15 @@ puts "\n"
 require 'optparse'
 options = {}
 OptionParser.new do |opt|
-	opt.on('-i', '--input <kicad_export.xml>',	'Kicad XML export file') { |o| options[:xml_filename] = o }
-	opt.on('-o', '--output <bom.csv>',		'Generated CSV file. If omitted, <kicad_export.xml>.csv will be created') { |o| options[:csv_filename] = o }
-	opt.on('-g', '--group_by <property>',		'Group components by property') { |o| options[:groupby_field] = o }
-	opt.on('-s', '--separator <character>',		'CSV style separator character. Default is comma.') { |o| options[:separator] = o }
+	opt.on('-i', '--input <kicad_export.xml>',	'Kicad XML export file.')						{ |i| options[:xml_filename] = i }
+	opt.on('-o', '--output <bom.csv>',		'Generated CSV file. If omitted, <kicad_export.xml>.csv will be used.')	{ |o| options[:csv_filename] = o }
+	opt.on('-g', '--group_by <property field>',	'Group components by property field.')					{ |g| options[:groupby_field] = g }
+	opt.on('-s', '--separator <character>',		'Separator character. Default is comma.')				{ |s| options[:separator] = s }
+
+	opt.on("-h", "--help", "Prints this help.") do
+		puts opt
+		exit
+	end
 end.parse!
 
 
@@ -227,10 +216,12 @@ if options[:xml_filename] then
 
 	puts " #{components.count} components found\n\n"
 
+	# setting default values if options not explicitely specified
 	options[:csv_filename] ? csv_filename = options[:csv_filename] : csv_filename = options[:xml_filename] + ".csv"
 	options[:separator] ? separator = options[:separator] : separator = ','
 
 	puts "CSV output file: #{csv_filename}, using '#{separator}' as separator"
+
 	print "Writing CSV file..."
 
 
@@ -243,7 +234,5 @@ if options[:xml_filename] then
 	puts "\nDone.\n\n"
 
 else
-	puts "Requires at least input xml filename. PLease, use -h to see help"
-
+	puts "Requires at least Kicad XML export filename. Please use -h to see help"
 end
-
