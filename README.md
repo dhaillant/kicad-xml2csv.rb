@@ -6,15 +6,20 @@ Typically, this is useful for importing the BOM to suppliers' websites "quick bu
 Add a custom field named after your favorite supplier, and fill in the supplier's component reference.
 
 This script uses **Ruby**, with *REXML* and *forwardable*
+
 Compatible with KiCad 4, 5 and 6
 
 
 > xml2csv version 20220524
 > 
 > Usage: xml2csv [options]
+> 
 >    -i, --input <kicad_export.xml>   Kicad XML export file
+> 
 >    -o, --output <bom.csv>           Generated CSV file. If omitted, <kicad_export.xml>.csv will be created
+> 
 >    -g, --group_by <field>        Group components by field
+> 
 >    -s, --separator <character>      CSV style separator character. Default is comma.
 
 With version 20220524:
