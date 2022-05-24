@@ -18,7 +18,7 @@ require "rexml/document"
 require 'forwardable'
 
 
-$xml2csv_version = "20210901"
+$xml2csv_version = "20220524"
 
 =begin
 	Convert a Kicad V4 or V5 XML export file to CSV
@@ -39,16 +39,14 @@ class Component
 	def display
 		string = @ref + " " + @value
 
-		# extra fields :
-
 		puts string
 	end
 
-	def output_csv file
-		@ref.length==0 ? 	file.printf("\"\",") : file.printf("\"%s\",", @ref)
-		@value.length==0 ?	file.printf("\"\",") : file.printf("\"%s\",", @value)
-		@footprint.length==0 ?	file.printf("\"\",") : file.printf("\"%s\",", @ref)
-		@datasheet.length==0 ?	file.printf("\"\"")  : file.printf("\"%s\"", @ref)
+	def output_csv file, separator
+		@ref.length==0 ? 	file.printf("\"\"%s", separator) : file.printf("\"%s\"%s", @ref, separator)
+		@value.length==0 ?	file.printf("\"\"%s", separator) : file.printf("\"%s\"%s", @value, separator)
+		@footprint.length==0 ?	file.printf("\"\"%s", separator) : file.printf("\"%s\"%s", @ref, separator)
+		@datasheet.length==0 ?	file.printf("\"\"")              : file.printf("\"%s\"",   @ref)
 
 		file.printf("\n")
 	end
@@ -64,7 +62,7 @@ class Components
 		@components_array = []
 	end
 
-
+=begin
 	def group_by field
 		# sort the array o components by comparing the component's extra field
 		# .to_s is here to avoid comparing a string to a nil when extra field doesn't exist
@@ -84,6 +82,7 @@ class Components
 			end
 		end
 	end
+=end
 
 	def display
 		@components_array.each do |c|
@@ -106,45 +105,37 @@ class Components
 		csv_file = File.new(csv_filename, "w")
 
 		@components_array.each do |c|
-			c.output_csv csv_file
+			c.output_csv csv_file, separator
 		end
 
 		csv_file.close
 	end
 
-	def output_csv_grouped_by field, csv_filename, separator = ",", show_refs = false
-		# sort the array of components by comparing the component's extra field
-		# .to_s is here to avoid comparing a string to a nil when extra field doesn't exist
-		#sca = @components_array.sort { |a, b| a.extra_fields[field].to_s <=> b.extra_fields[field].to_s }
-
-		# OR...
+	def output_csv_grouped_by field, csv_filename, separator = ","
 		# sort by reference :
 		sca = @components_array.sort { |a, b| a.ref.to_s <=> b.ref.to_s }
 
+		# number of components with empty extra field
+		has_no_value_in_extra_field = 0
 
 		csv_file = File.new(csv_filename, "w")
 
 		# group the components by extra field
 		sca.group_by { |c| c.extra_fields[field] }.each_pair do |value, grouped_components|
-			csv_file.printf("\"%s\"%s%d", grouped_components[0].extra_fields[field].to_s, separator, grouped_components.count)
+			if grouped_components[0].extra_fields[field].to_s != "" then
+				# print a line to the file
+				csv_file.printf("\"%s\"%s%d\n", grouped_components[0].extra_fields[field].to_s, separator, grouped_components.count)
 
-			if show_refs then
-				# output the refs:
-
-				csv_file.printf("%s\"", separator)
-				grouped_components.each do |c_group|
-					#c_group.display
-					#puts "    #{c_group.ref}"
-					#puts c_group.extra_fields{field}
-					csv_file.printf("%s ", c_group.ref)
-				end
-				csv_file.printf("\"")
+				display_progression
+			else
+				has_no_value_in_extra_field += grouped_components.count
 			end
-
-			csv_file.print "\n"
-			display_progression
 		end
 		csv_file.close
+
+		if has_no_value_in_extra_field > 0 then
+			puts "\nWARNING! #{has_no_value_in_extra_field} compnent(s) with no value for #{field}!"
+		end
 	end
 
 
@@ -153,7 +144,7 @@ class Components
 		xml_file = File.new(xml_filename)
 		doc = REXML::Document.new xml_file
 
-		print "Loading XML file #{xml_filename}..."
+		print "Loading XML file #{xml_filename}...\n"
 		xml_components = doc.elements.to_a("export/components/comp")
 
 		xml_components.each do |xml_comp|
@@ -180,7 +171,7 @@ end
 
 
 
-def display_progression index=0
+def display_progression
 	STDOUT.sync = true
 	print "."
 end
@@ -214,7 +205,7 @@ if options[:xml_filename] then
 	components = Components.new
 	components.read_xml options[:xml_filename]
 
-	puts " #{components.count} components found\n\n"
+	puts "\n#{components.count} components found\n\n"
 
 	# setting default values if options not explicitely specified
 	options[:csv_filename] ? csv_filename = options[:csv_filename] : csv_filename = options[:xml_filename] + ".csv"
@@ -231,7 +222,7 @@ if options[:xml_filename] then
 		components.output_csv csv_filename, separator
 	end
 
-	puts "\nDone.\n\n"
+	puts "\nDone!\n\n"
 
 else
 	puts "Requires at least Kicad XML export filename. Please use -h to see help"
