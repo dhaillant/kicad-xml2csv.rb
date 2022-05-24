@@ -1,7 +1,7 @@
 # kicad-xml2csv.rb
 KiCad "xml to csv" BOM generator, made in Ruby language
 
-The main purpose of this tool is to export one field from the BOM, with the number of components with the same value.
+The main purpose of this tool is to export one field from the BOM, with the number of components of the same value.
 Typically, this is useful for importing the BOM to suppliers' websites "quick buy" feature:
 Add a custom field named after your favorite supplier, and fill in the supplier's component reference.
 
