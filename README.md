@@ -5,12 +5,15 @@ The main purpose of this tool is to export one field from the BOM, with the numb
 Typically, this is useful for importing the BOM to suppliers' websites "quick buy" feature:
 Add a custom field named after your favorite supplier, and fill in the supplier's component reference.
 
+Also, you can generate a BOM for Assembly (typically JLCPCB). See -a|--assembly option.
+
+
 This script uses **Ruby**, with *REXML* and *forwardable*
 
 Compatible with KiCad 4, 5 and 6
 
 
-> xml2csv version 20220524
+> xml2csv version 20220524-assembly
 > 
 > Usage: xml2csv [options]
 > 
@@ -18,12 +21,17 @@ Compatible with KiCad 4, 5 and 6
 > 
 >    -o, --output <bom.csv>           Generated CSV file. If omitted, <kicad_export.xml>.csv will be created
 > 
->    -g, --group_by <field>        Group components by field
+>    -g, --group_by <field>           Group components by field
 > 
 >    -s, --separator <character>      CSV style separator character. Default is comma.
+> 
+>    -a, --assembly                   Generates a BOM for Assembly. --group_by option is mandatory.
 
 With version 20220524:
 
 * In "group_by" mode, the number of components with an empty field is now only display on screen and removed from CSV output.
 * Separator now works also for standard mode too.
+
+Version 20220524-assembly:
+* Add the ability to export a CSV file for Assembly (typically JLCPCB format)
 

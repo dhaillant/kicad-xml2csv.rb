@@ -18,7 +18,7 @@ require "rexml/document"
 require 'forwardable'
 
 
-$xml2csv_version = "20220524"
+$xml2csv_version = "20220524-assembly"
 
 =begin
 	Convert a Kicad V4 or V5 XML export file to CSV
@@ -61,28 +61,6 @@ class Components
 	def initialize
 		@components_array = []
 	end
-
-=begin
-	def group_by field
-		# sort the array o components by comparing the component's extra field
-		# .to_s is here to avoid comparing a string to a nil when extra field doesn't exist
-		#sca = @components_array.sort { |a, b| a.extra_fields[field].to_s <=> b.extra_fields[field].to_s }
-
-		# OR...
-		# sort by reference :
-		sca = @components_array.sort { |a, b| a.ref.to_s <=> b.ref.to_s }
-
-
-
-		# group by extra field the components
-		sca.group_by { |c| c.extra_fields[field] }.each_pair do |value, grouped_components|
-			puts "#{grouped_components.count} x #{grouped_components[0].extra_fields[field]}"
-			grouped_components.each do |c_group|
-				puts "    #{c_group.ref}"
-			end
-		end
-	end
-=end
 
 	def display
 		@components_array.each do |c|
@@ -139,6 +117,65 @@ class Components
 	end
 
 
+	def output_csv_for_assembly_with field, csv_filename, separator = ","
+		# ALPHANUMERIC sort by reference:
+		sca = @components_array.sort_by { |a|
+			# split LETTERS and NUMBERS (
+			letter, number = *a.ref.scan(/\d+|\D+/)
+			# compare LETTERS first
+			[letter, number.to_i]
+		}
+		# The regular expression /\d+|\D+/ reads, "match one or more (+) digits (\d) or one or more non-digits (\D).
+		# https://stackoverflow.com/questions/64988095/ruby-split-word-to-letters-and-numbers
+
+		# number of components with empty extra field
+		has_no_value_in_extra_field = 0
+
+		# open file for write
+		csv_file = File.new(csv_filename, "w")
+
+		# write header
+		csv_file.printf "Comment,Designator,Footprint,%s\n", field
+
+		# group the components by extra field
+		sca.group_by { |c| c.extra_fields[field] }.each_pair do |value, grouped_components|
+			if grouped_components[0].extra_fields[field].to_s != "" then
+				# print a line to the file (value, list of refs, footprint, extra_field)
+
+				# 1st: value
+				csv_file.printf("\"%s\"%s", grouped_components[0].value.to_s, separator)
+
+				# 2nd: list of refs
+				csv_file.printf("\"")
+				# browse all components and print their "ref"
+				for i in 0..grouped_components.count - 1 do
+					csv_file.printf("%s", grouped_components[i].ref)
+
+					# if next item exists, add a separator
+					if grouped_components[i + 1] then
+						csv_file.printf("%s", separator)
+					end
+				end
+				csv_file.printf("\"%s", separator)
+
+				# 3rd: footprint
+				csv_file.printf("\"%s\"%s", grouped_components[0].footprint.to_s, separator)
+
+				# 4th: extra field
+				csv_file.printf("\"%s\"\n", grouped_components[0].extra_fields[field].to_s)
+
+				display_progression
+			else
+				has_no_value_in_extra_field += grouped_components.count
+			end
+		end
+		csv_file.close
+
+		if has_no_value_in_extra_field > 0 then
+			puts "\nWARNING! #{has_no_value_in_extra_field} compnent(s) with no value for #{field}!"
+		end
+	end
+
 
 	def read_xml xml_filename
 		xml_file = File.new(xml_filename)
@@ -192,13 +229,17 @@ OptionParser.new do |opt|
 	opt.on('-g', '--group_by <property field>',	'Group components by property field.')					{ |g| options[:groupby_field] = g }
 	opt.on('-s', '--separator <character>',		'Separator character. Default is comma.')				{ |s| options[:separator] = s }
 
+	opt.on('-a', '--assembly',	'Generates a BOM for Assembly. --group_by option is mandatory.') do |a|
+		options[:assembly] = a
+	end
+
 	opt.on("-h", "--help", "Prints this help.") do
 		puts opt
 		exit
 	end
 end.parse!
 
-
+#p options
 
 if options[:xml_filename] then
 
@@ -217,7 +258,11 @@ if options[:xml_filename] then
 
 
 	if options[:groupby_field] then
-		components.output_csv_grouped_by options[:groupby_field], csv_filename, separator
+		if options[:assembly] then
+			components.output_csv_for_assembly_with options[:groupby_field], csv_filename, separator
+		else
+			components.output_csv_grouped_by options[:groupby_field], csv_filename, separator
+		end
 	else
 		components.output_csv csv_filename, separator
 	end
